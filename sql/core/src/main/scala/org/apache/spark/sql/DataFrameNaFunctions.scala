@@ -135,6 +135,14 @@ final class DataFrameNaFunctions private[sql](df: DataFrame) {
   def fill(value: Double): DataFrame = fill(value, df.columns)
 
   /**
+    * Returns a new [[DataFrame]] that replaces null or NaN values in numeric columns with `value`.
+    *
+    * @since 2.1.0
+    */
+  def fill(value: Long): DataFrame = fill(value, df.columns)
+
+
+  /**
    * Returns a new [[DataFrame]] that replaces null values in string columns with `value`.
    *
    * @since 1.3.1
@@ -150,6 +158,15 @@ final class DataFrameNaFunctions private[sql](df: DataFrame) {
   def fill(value: Double, cols: Array[String]): DataFrame = fill(value, cols.toSeq)
 
   /**
+    * Returns a new [[DataFrame]] that replaces null or NaN values in specified numeric columns.
+    * If a specified column is not a numeric column, it is ignored.
+    *
+    * @since 2.1.0
+    */
+  def fill(value: Long, cols: Array[String]): DataFrame = fill(value, cols.toSeq)
+
+
+  /**
    * (Scala-specific) Returns a new [[DataFrame]] that replaces null or NaN values in specified
    * numeric columns. If a specified column is not a numeric column, it is ignored.
    *
@@ -161,6 +178,25 @@ final class DataFrameNaFunctions private[sql](df: DataFrame) {
       // Only fill if the column is part of the cols list.
       if (f.dataType.isInstanceOf[NumericType] && cols.exists(col => columnEquals(f.name, col))) {
         fillCol[Double](f, value)
+      } else {
+        df.col(f.name)
+      }
+    }
+    df.select(projections : _*)
+  }
+
+  /**
+    * (Scala-specific) Returns a new [[DataFrame]] that replaces null or NaN values in specified
+    * numeric columns. If a specified column is not a numeric column, it is ignored.
+    *
+    * @since 2.1.0
+    */
+  def fill(value: Long, cols: Seq[String]): DataFrame = {
+    val columnEquals = df.sparkSession.sessionState.analyzer.resolver
+    val projections = df.schema.fields.map { f =>
+      // Only fill if the column is part of the cols list.
+      if (f.dataType.isInstanceOf[NumericType] && cols.exists(col => columnEquals(f.name, col))) {
+        fillCol[Long](f, value)
       } else {
         df.col(f.name)
       }
