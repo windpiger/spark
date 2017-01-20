@@ -1430,7 +1430,7 @@ class HiveDDLSuite
       assert(table.partitionSchema.map(s => (s.name, s.dataType)) == partStructType)
 
       sql(
-        """CREATE TABLE IF NOT EXISTS t3(b int, a int, d string, c string)
+        """CREATE TABLE IF NOT EXISTS t3(b int, a int, c string, d string)
           | using hive
           | partitioned by (d, c)""".stripMargin)
       table = spark.sessionState.catalog.getTableMetadata(TableIdentifier("t3"))

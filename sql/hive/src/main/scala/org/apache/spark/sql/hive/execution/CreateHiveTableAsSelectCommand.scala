@@ -48,15 +48,13 @@ case class CreateHiveTableAsSelectCommand(
   override def run(sparkSession: SparkSession): Seq[Row] = {
     // when create a partitioned table, we should reorder the columns
     // to put the partition columns at the end
-    val partitionAttrs = tableDesc.partitionColumnNames.map { p =>
-      query.output.find(_.name == p).getOrElse(
-        new AnalysisException(s"Partition column[$p] does not exist " +
-          s"in query output partition").asInstanceOf[NamedExpression]
+    val reorderdOutput = tableDesc.schema.map { s =>
+      query.output.find(_.name == s.name).getOrElse(
+        throw new AnalysisException(s"Partition column[${s.name}] does not exist " +
+          s"in query output partition")
       )
     }
-    val partitionSet = AttributeSet(partitionAttrs)
-    val dataAttrs = query.output.filterNot(partitionSet.contains)
-    val reorderedOutputQuery = Project(dataAttrs ++ partitionAttrs, query)
+    val reorderedOutputQuery = Project(reorderdOutput, query)
 
     lazy val metastoreRelation: MetastoreRelation = {
       import org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat

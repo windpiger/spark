@@ -65,6 +65,7 @@ private[hive] class HiveSessionState(sparkSession: SparkSession)
         AnalyzeCreateTable(sparkSession) ::
         PreprocessTableInsertion(conf) ::
         DataSourceAnalysis(conf) ::
+        ReorderHivePartitionedTableSchema(sparkSession) ::
         new DetermineHiveSerde(conf) ::
         new HiveAnalysis(sparkSession) ::
         new FindDataSourceTable(sparkSession) ::

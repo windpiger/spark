@@ -17,19 +17,17 @@
 
 package org.apache.spark.sql.execution.datasources
 
-import scala.util.control.NonFatal
-
 import org.apache.spark.sql.{AnalysisException, SaveMode, SparkSession}
 import org.apache.spark.sql.catalyst.analysis._
 import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, Cast, RowOrdering}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Cast, NamedExpression, RowOrdering}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.command.DDLUtils
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
-import org.apache.spark.sql.types.{AtomicType, StructType}
+import org.apache.spark.sql.types.{AtomicType, StructField, StructType}
 
 /**
  * Try to replaces [[UnresolvedRelation]]s with [[ResolveDataSource]].
@@ -95,7 +93,7 @@ case class AnalyzeCreateTable(sparkSession: SparkSession) extends Rule[LogicalPl
     case c @ CreateTable(tableDesc, SaveMode.Append, Some(query))
         if sparkSession.sessionState.catalog.tableExists(tableDesc.identifier) =>
       // This is guaranteed by the parser and `DataFrameWriter`
-      assert(tableDesc.schema.isEmpty && tableDesc.provider.isDefined)
+      assert(tableDesc.provider.isDefined)
 
       // Analyze the query in CTAS and then we can do the normalization and checking.
       val qe = sparkSession.sessionState.executePlan(query)
@@ -188,7 +186,7 @@ case class AnalyzeCreateTable(sparkSession: SparkSession) extends Rule[LogicalPl
       c.copy(
         // trust everything from the existing table, except schema as we assume it's empty in a lot
         // of places, when we do CTAS.
-        tableDesc = existingTable.copy(schema = new StructType()),
+        tableDesc = existingTable,
         query = Some(newQuery))
 
     // Here we normalize partition, bucket and sort column names, w.r.t. the case sensitivity
@@ -220,6 +218,7 @@ case class AnalyzeCreateTable(sparkSession: SparkSession) extends Rule[LogicalPl
       checkDuplication(columnNames, "table definition of " + tableDesc.identifier)
 
       val normalizedTable = tableDesc.copy(
+        schema = schema,
         partitionColumnNames = normalizePartitionColumns(schema, tableDesc),
         bucketSpec = normalizeBucketSpec(schema, tableDesc))
 
@@ -454,5 +453,28 @@ case class PreWriteCheck(conf: SQLConf, catalog: SessionCatalog)
 
       case _ => // OK
     }
+  }
+}
+
+/**
+ * when create a Hive partitioned table, make sure the partition columns is at the last
+ * of schema, and the partition columns order is same with partitionColumnNames
+ */
+case class ReorderHivePartitionedTableSchema(sparkSession: SparkSession)
+  extends Rule[LogicalPlan] {
+
+  def apply(plan: LogicalPlan): LogicalPlan = plan transform {
+    case c@CreateTable(tableDesc, _, _) if DDLUtils.isHiveTable(tableDesc)
+      && tableDesc.partitionColumnNames.nonEmpty =>
+      val partitionAttrs = tableDesc.partitionColumnNames.map { p =>
+        tableDesc.schema.find(_.name == p).getOrElse(
+          throw new AnalysisException(s"Partition column[$p] does not exist " +
+            s"in query output partition")
+        )
+      }
+      val dataAttrs = tableDesc.schema.filterNot(partitionAttrs.contains)
+      c.copy(
+        tableDesc = tableDesc.copy(schema = StructType(dataAttrs ++ partitionAttrs))
+      )
   }
 }
