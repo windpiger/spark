@@ -17,9 +17,8 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
+import java.net.URI
 import java.util.Date
-
-import scala.collection.mutable
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, InternalRow, TableIdentifier}
@@ -47,9 +46,6 @@ case class CatalogFunction(
  * Storage format, used to describe how a partition or a table is stored.
  */
 case class CatalogStorageFormat(
-    // TODO(ekl) consider storing this field as java.net.URI for type safety. Note that this must
-    // be converted to/from a hadoop Path object using new Path(new URI(locationUri)) and
-    // path.toUri respectively before use as a filesystem path due to URI char escaping.
     locationUri: Option[String],
     inputFormat: Option[String],
     outputFormat: Option[String],
@@ -182,6 +178,17 @@ case class CatalogTable(
     tracksPartitionsInCatalog: Boolean = false) {
 
   import CatalogTable._
+
+  // the location should be a legal URI
+  {
+    try {
+      new URI(location)
+    } catch {
+      case e: Exception =>
+        throw new AnalysisException(s"the table($identifier)'s location($location) " +
+          s"is an illegal URI")
+    }
+  }
 
   /** schema of this table's partition columns */
   def partitionSchema: StructType = StructType(schema.filter {

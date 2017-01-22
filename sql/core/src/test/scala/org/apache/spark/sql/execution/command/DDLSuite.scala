@@ -1816,4 +1816,28 @@ class DDLSuite extends QueryTest with SharedSQLContext with BeforeAndAfterEach {
       }
     }
   }
+
+  test("check if the table's location is legal") {
+    withTable("t") {
+      withTempDir { dir =>
+        var newDir = dir.getAbsolutePath.stripSuffix("/") + "/a b"
+        new File(newDir).mkdir()
+
+        var e = intercept[AnalysisException] {
+          spark.sql(s"create table t(a string, b int) using parquet options(path '$newDir')")
+        }
+        assert(e.message.contains(s"the table(`t`)'s location($newDir) " +
+          s"is an illegal URI"))
+
+        spark.sql(s"create table t(a string, b int) using parquet options(path '$dir')")
+        newDir = dir.getAbsolutePath.stripSuffix("/") + "/c d"
+
+        e = intercept[AnalysisException] {
+          spark.sql(s"alter table t set location '$newDir'")
+        }
+        assert(e.message.contains(s"the table(`default`.`t`)'s location($newDir) " +
+          s"is an illegal URI"))
+      }
+    }
+  }
 }
