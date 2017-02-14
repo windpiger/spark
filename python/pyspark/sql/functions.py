@@ -982,7 +982,7 @@ def months_between(date1, date2):
     return Column(sc._jvm.functions.months_between(_to_java_column(date1), _to_java_column(date2)))
 
 
-@since(2.2)
+@since(2.1)
 def to_date(col, format=None):
     """Converts a :class:`Column` of :class:`pyspark.sql.types.StringType` or
     :class:`pyspark.sql.types.TimestampType` into :class:`pyspark.sql.types.DateType`
@@ -1006,7 +1006,7 @@ def to_date(col, format=None):
     return Column(jc)
 
 
-@since(2.2)
+@since(2.1)
 def to_timestamp(col, format=None):
     """Converts a :class:`Column` of :class:`pyspark.sql.types.StringType` or
     :class:`pyspark.sql.types.TimestampType` into :class:`pyspark.sql.types.DateType`

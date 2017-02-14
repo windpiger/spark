@@ -1763,7 +1763,7 @@ setMethod("to_date",
 #' @family datetime_funcs
 #' @aliases to_date,Column,character-method
 #' @export
-#' @note to_date(Column, character) since 2.2.0
+#' @note to_date(Column, character) since 2.1.1
 setMethod("to_date",
           signature(x = "Column", format = "character"),
           function(x, format) {
@@ -1793,7 +1793,7 @@ setMethod("to_date",
 #' to_timestamp(df$c)
 #' to_timestamp(df$c, 'yyyy-MM-dd')
 #' }
-#' @note to_timestamp(Column) since 2.2.0
+#' @note to_timestamp(Column) since 2.1.1
 setMethod("to_timestamp",
           signature(x = "Column", format = "missing"),
           function(x, format) {
@@ -1806,7 +1806,7 @@ setMethod("to_timestamp",
 #' @family datetime_funcs
 #' @aliases to_timestamp,Column,character-method
 #' @export
-#' @note to_timestamp(Column, character) since 2.2.0
+#' @note to_timestamp(Column, character) since 2.1.1
 setMethod("to_timestamp",
           signature(x = "Column", format = "character"),
           function(x, format) {

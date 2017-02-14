@@ -2668,7 +2668,7 @@ object functions {
    * Convert time string to a Unix timestamp (in seconds).
    * Uses the pattern "yyyy-MM-dd HH:mm:ss" and will return null on failure.
    * @group datetime_funcs
-   * @since 2.2.0
+   * @since 2.1.1
    */
   def to_timestamp(s: Column): Column = withExpr {
     new ParseToTimestamp(s.expr, Literal("yyyy-MM-dd HH:mm:ss"))
@@ -2679,7 +2679,7 @@ object functions {
    * (see [http://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html])
    * to Unix timestamp (in seconds), return null if fail.
    * @group datetime_funcs
-   * @since 2.2.0
+   * @since 2.1.1
    */
   def to_timestamp(s: Column, fmt: String): Column = withExpr {
     new ParseToTimestamp(s.expr, Literal(fmt))
@@ -2699,7 +2699,7 @@ object functions {
    * return null if fail.
    *
    * @group datetime_funcs
-   * @since 2.2.0
+   * @since 2.1.1
    */
   def to_date(e: Column, fmt: String): Column = withExpr {
     new ParseToDate(e.expr, Literal(fmt))
