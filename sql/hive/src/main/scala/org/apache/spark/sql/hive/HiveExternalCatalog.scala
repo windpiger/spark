@@ -207,7 +207,7 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
       // to create the table directory and write out data before we create this table, to avoid
       // exposing a partial written table.
       val needDefaultTableLocation = tableDefinition.tableType == MANAGED &&
-        tableDefinition.storage.locationUri.isEmpty
+          tableDefinition.storage.locationUri.isEmpty
 
       val tableLocation = if (needDefaultTableLocation) {
         Some(new Path(defaultTablePath(tableDefinition.identifier)).toUri)
@@ -565,7 +565,8 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
 
         val newLocation = tableDefinition.storage.locationUri
         val storageWithPathOption = tableDefinition.storage.copy(
-          properties = tableDefinition.storage.properties ++ newLocation.map("path" -> new Path(_).toString))
+          properties = tableDefinition.storage.properties ++ newLocation
+            .map("path" -> new Path(_).toString))
 
         val oldLocation = getLocationFromStorageProps(oldTableDef)
         if (oldLocation == newLocation) {
