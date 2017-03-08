@@ -255,8 +255,26 @@ class SessionCatalog(
     val db = formatDatabaseName(tableDefinition.identifier.database.getOrElse(getCurrentDatabase))
     val table = formatTableName(tableDefinition.identifier.table)
     validateName(table)
-    val newTableDefinition = tableDefinition.copy(identifier = TableIdentifier(table, Some(db)))
     requireDbExists(db)
+
+    // Set the default table location if this is a managed table and its location is not
+    // specified.
+    // Ideally we should not create a managed table with location, but Hive serde table can
+    // specify location for managed table. And in [[CreateDataSourceTableAsSelectCommand]] we have
+    // to create the table directory and write out data before we create this table, to avoid
+    // exposing a partial written table.
+    val needDefaultTableLocation = tableDefinition.tableType == CatalogTableType.MANAGED &&
+      tableDefinition.storage.locationUri.isEmpty
+
+    val newTableDefinition = if (needDefaultTableLocation) {
+      tableDefinition.copy(
+        storage = tableDefinition.storage.copy(
+          locationUri = Some(defaultTablePath(tableDefinition.identifier))),
+        identifier = TableIdentifier(table, Some(db)))
+    } else {
+      tableDefinition.copy(identifier = TableIdentifier(table, Some(db)))
+    }
+
     externalCatalog.createTable(newTableDefinition, ignoreIfExists)
   }
 

@@ -52,6 +52,17 @@ abstract class ExternalCatalogSuite extends SparkFunSuite with BeforeAndAfterEac
     }
   }
 
+  protected def getTableWithPath(catalog: ExternalCatalog, table: CatalogTable): CatalogTable = {
+    val needDefaultTableLocation = table.tableType == CatalogTableType.MANAGED &&
+      table.storage.locationUri.isEmpty
+
+    val defaultPath = new Path(
+      new Path(catalog.getDatabase(table.database).locationUri), table.identifier.table)
+    if (needDefaultTableLocation) {
+      table.copy(storage = table.storage.copy(locationUri = Some(defaultPath.toUri)))
+    } else table
+  }
+  
   // --------------------------------------------------------------------------
   // Databases
   // --------------------------------------------------------------------------
@@ -282,7 +293,7 @@ abstract class ExternalCatalogSuite extends SparkFunSuite with BeforeAndAfterEac
       provider = Some(defaultProvider),
       partitionColumnNames = Seq("WoRLd"),
       bucketSpec = Some(BucketSpec(4, Seq("HelLo"), Nil)))
-    catalog.createTable(tbl, ignoreIfExists = false)
+    catalog.createTable(getTableWithPath(catalog, tbl), ignoreIfExists = false)
 
     val readBack = catalog.getTable("db1", "tbl")
     assert(readBack.schema == tbl.schema)
@@ -333,7 +344,7 @@ abstract class ExternalCatalogSuite extends SparkFunSuite with BeforeAndAfterEac
         .add("partCol2", "string"),
       provider = Some(defaultProvider),
       partitionColumnNames = Seq("partCol1", "partCol2"))
-    catalog.createTable(table, ignoreIfExists = false)
+    catalog.createTable(getTableWithPath(catalog, table), ignoreIfExists = false)
 
     val partition = CatalogTablePartition(Map("partCol1" -> "1", "partCol2" -> "2"), storageFormat)
     catalog.createPartitions("db1", "tbl", Seq(partition), ignoreIfExists = false)
@@ -360,7 +371,7 @@ abstract class ExternalCatalogSuite extends SparkFunSuite with BeforeAndAfterEac
         .add("partCol2", "string"),
       provider = Some(defaultProvider),
       partitionColumnNames = Seq("partCol1", "partCol2"))
-    catalog.createTable(table, ignoreIfExists = false)
+    catalog.createTable(getTableWithPath(catalog, table), ignoreIfExists = false)
 
     val newLocationPart1 = newUriForDatabase()
     val newLocationPart2 = newUriForDatabase()
@@ -508,7 +519,7 @@ abstract class ExternalCatalogSuite extends SparkFunSuite with BeforeAndAfterEac
         .add("partCol2", "string"),
       provider = Some(defaultProvider),
       partitionColumnNames = Seq("partCol1", "partCol2"))
-    catalog.createTable(table, ignoreIfExists = false)
+    catalog.createTable(getTableWithPath(catalog, table), ignoreIfExists = false)
 
     val tableLocation = new Path(catalog.getTable("db1", "tbl").location)
 
@@ -730,7 +741,7 @@ abstract class ExternalCatalogSuite extends SparkFunSuite with BeforeAndAfterEac
       provider = Some(defaultProvider)
     )
 
-    catalog.createTable(table, ignoreIfExists = false)
+    catalog.createTable(getTableWithPath(catalog, table), ignoreIfExists = false)
     assert(exists(db.locationUri, "my_table"))
 
     catalog.renameTable("db1", "my_table", "your_table")
@@ -766,7 +777,7 @@ abstract class ExternalCatalogSuite extends SparkFunSuite with BeforeAndAfterEac
         .add("partCol2", "string"),
       provider = Some(defaultProvider),
       partitionColumnNames = Seq("partCol1", "partCol2"))
-    catalog.createTable(table, ignoreIfExists = false)
+    catalog.createTable(getTableWithPath(catalog, table), ignoreIfExists = false)
 
     val tableLocation = catalog.getTable("db1", "tbl").location
 

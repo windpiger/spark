@@ -191,32 +191,21 @@ class InMemoryCatalog(
         throw new TableAlreadyExistsException(db = db, table = table)
       }
     } else {
-      // Set the default table location if this is a managed table and its location is not
-      // specified.
-      // Ideally we should not create a managed table with location, but Hive serde table can
-      // specify location for managed table. And in [[CreateDataSourceTableAsSelectCommand]] we have
-      // to create the table directory and write out data before we create this table, to avoid
-      // exposing a partial written table.
-      val needDefaultTableLocation =
-        tableDefinition.tableType == CatalogTableType.MANAGED &&
-          tableDefinition.storage.locationUri.isEmpty
-
-      val tableWithLocation = if (needDefaultTableLocation) {
-        val defaultTableLocation = new Path(new Path(catalog(db).db.locationUri), table)
+      if (tableDefinition.tableType == CatalogTableType.MANAGED) {
+        val defaultTableLocation = new Path(new Path(tableDefinition.location), table)
         try {
           val fs = defaultTableLocation.getFileSystem(hadoopConfig)
-          fs.mkdirs(defaultTableLocation)
+          if (!fs.exists(defaultTableLocation)) {
+            fs.mkdirs(defaultTableLocation)
+          }
         } catch {
           case e: IOException =>
             throw new SparkException(s"Unable to create table $table as failed " +
               s"to create its directory $defaultTableLocation", e)
         }
-        tableDefinition.withNewStorage(locationUri = Some(defaultTableLocation.toUri))
-      } else {
-        tableDefinition
       }
 
-      catalog(db).tables.put(table, new TableDesc(tableWithLocation))
+      catalog(db).tables.put(table, new TableDesc(tableDefinition))
     }
   }
 
