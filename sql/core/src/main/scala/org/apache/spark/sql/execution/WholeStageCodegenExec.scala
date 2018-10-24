@@ -731,7 +731,17 @@ case class CollapseCodegenStages(conf: SQLConf) extends Rule[SparkPlan] {
   def apply(plan: SparkPlan): SparkPlan = {
     if (conf.wholeStageEnabled) {
       WholeStageCodegenId.resetPerQuery()
-      insertWholeStageCodegen(plan)
+      val newPlan = insertWholeStageCodegen(plan)
+      if (conf.adaptiveExecutionEnabled) {
+        newPlan.transform {
+          case p: WholeStageCodegenExec
+            if p.child.isInstanceOf[WholeStageCodegenExec] =>
+            p.child.asInstanceOf[WholeStageCodegenExec].child
+          case p: InputAdapter
+            if p.child.isInstanceOf[InputAdapter] =>
+            p.child.asInstanceOf[InputAdapter].child
+        }
+      } else newPlan
     } else {
       plan
     }
